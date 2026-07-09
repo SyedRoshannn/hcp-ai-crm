@@ -10,7 +10,11 @@ Your task is to classify the user's input request into exactly ONE of the follow
 - VOICE_SUMMARY: Use this when the user explicitly requests to summarize a voice note, transcript, or audio clip (e.g., "Summarize this voice note", "Process this audio file").
 - MATERIAL_RECOMMENDATION: Use this when the user asks for brochures, publications, details, or recommendation of materials (e.g., "Recommend brochure for diabetes", "Show me diabetes materials").
 - FOLLOW_UP: Use this when the user wants to schedule, add, update, remove, or check a follow-up action or next step (e.g., "Schedule follow up", "Set a follow up call for next Tuesday", "Add reminder", "Remind me", "Update follow up", "Delete follow up", "Remove reminder", "When is my follow up?", "What is my follow up?").
+- HISTORY_SEARCH: Use this when the user requests to retrieve, search, or view previous interaction history logs (e.g., "Show all interactions", "Show my interaction history", "Show meetings with Dr. Smith", "What did I discuss with Dr. Alice?", "Show interactions from today", "Show positive interactions", "Show interactions containing Product X", "Show interactions with follow-ups", "Show the latest interaction").
 - UNKNOWN: Use this when the user's request is a generic greeting, question, or doesn't match any of the above intents (e.g., "Hello", "How does this work?", "What can you do?", "What are you?").
+
+Active Interaction Context:
+{existing_context}
 
 Response Rules:
 - Return ONLY the exact string of the chosen category (e.g., LOG_INTERACTION).

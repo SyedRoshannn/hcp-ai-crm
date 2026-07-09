@@ -12,6 +12,9 @@ class ChatRequest(BaseModel):
     message: str
     extracted_data: Optional[Dict[str, Any]] = None
     interaction_id: Optional[str] = None
+    last_intent: Optional[str] = None
+    last_tool: Optional[str] = None
+    last_response: Optional[str] = None
 
 class ChatResponse(BaseModel):
     intent: Optional[str]
@@ -20,6 +23,9 @@ class ChatResponse(BaseModel):
     response: Optional[str] = None
     recommended_materials: Optional[List[str]] = None
     interaction_id: Optional[str] = None
+    last_intent: Optional[str] = None
+    last_tool: Optional[str] = None
+    last_response: Optional[str] = None
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
@@ -30,7 +36,7 @@ async def chat_endpoint(request: ChatRequest):
         # Debug Logging for interaction_id received by API
         logger.info(f"[DEBUG LOG] API received interaction_id: {request.interaction_id}")
         
-        # Create the initial state structure for the graph execution
+        # Create the initial state structure for the graph execution including memory properties
         initial_state: AgentState = {
             "user_input": request.message,
             "intent": None,
@@ -40,7 +46,10 @@ async def chat_endpoint(request: ChatRequest):
             "messages": [],
             "errors": [],
             "recommended_materials": None,
-            "interaction_id": request.interaction_id
+            "interaction_id": request.interaction_id,
+            "last_intent": request.last_intent,
+            "last_tool": request.last_tool,
+            "last_response": request.last_response
         }
         
         # Debug Logging for interaction_id entering LangGraph
@@ -63,7 +72,10 @@ async def chat_endpoint(request: ChatRequest):
             extracted_data=result.get("extracted_data", {}),
             response=result.get("response"),
             recommended_materials=result.get("recommended_materials"),
-            interaction_id=result.get("interaction_id")
+            interaction_id=result.get("interaction_id"),
+            last_intent=result.get("last_intent"),
+            last_tool=result.get("last_tool"),
+            last_response=result.get("last_response")
         )
     except HTTPException as he:
         raise he

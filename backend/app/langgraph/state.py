@@ -10,6 +10,7 @@ class Intent(str, Enum):
     VOICE_SUMMARY = "VOICE_SUMMARY"
     MATERIAL_RECOMMENDATION = "MATERIAL_RECOMMENDATION"
     FOLLOW_UP = "FOLLOW_UP"
+    HISTORY_SEARCH = "HISTORY_SEARCH"
     UNKNOWN = "UNKNOWN"
 
 class AgentState(TypedDict):
@@ -22,3 +23,6 @@ class AgentState(TypedDict):
     errors: List[str]
     recommended_materials: Optional[List[str]]
     interaction_id: Optional[str]
+    last_intent: Optional[str]
+    last_tool: Optional[str]
+    last_response: Optional[str]

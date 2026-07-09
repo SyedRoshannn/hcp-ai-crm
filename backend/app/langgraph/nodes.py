@@ -1,7 +1,9 @@
 from app.langgraph.state import AgentState, Intent
 from app.ai.llm import get_llm
 from app.langgraph.prompts import INTENT_CLASSIFICATION_PROMPT
+from app.utils.context_manager import resolve_interaction_context
 from langchain_core.prompts import ChatPromptTemplate
+import json
 import logging
 
 logger = logging.getLogger(__name__)
@@ -13,6 +15,7 @@ INTENT_TOOL_MAPPING = {
     Intent.VOICE_SUMMARY: "voice_summary_tool",
     Intent.MATERIAL_RECOMMENDATION: "material_recommendation_tool",
     Intent.FOLLOW_UP: "follow_up_tool",
+    Intent.HISTORY_SEARCH: "history_search_tool",
     Intent.UNKNOWN: None
 }
 
@@ -49,11 +52,16 @@ def router_node(state: AgentState) -> dict:
     """Evaluates the user request to classify intent and select the appropriate tool using LLM."""
     user_input = state.get("user_input", "")
     
-    # 1. Run local pre-checks for greetings / meaningless text
+    # 1. Resolve active interaction context first (triggers clearing context on new log queries)
+    extracted_data, interaction_id = resolve_interaction_context(state)
+    
+    # 2. Run local pre-checks for greetings / meaningless text
     if is_meaningless_or_greeting(user_input):
         return {
             "intent": Intent.UNKNOWN,
-            "selected_tool": None
+            "selected_tool": None,
+            "extracted_data": extracted_data,
+            "interaction_id": interaction_id
         }
         
     detected_intent = Intent.UNKNOWN
@@ -66,14 +74,19 @@ def router_node(state: AgentState) -> dict:
         prompt = ChatPromptTemplate.from_template(INTENT_CLASSIFICATION_PROMPT)
         chain = prompt | llm
         
-        response = chain.invoke({"user_input": user_input})
+        # Format existing context string for LLM classification guidance
+        existing_context_str = json.dumps(extracted_data) if extracted_data else "None"
+        
+        response = chain.invoke({
+            "user_input": user_input,
+            "existing_context": existing_context_str
+        })
         raw_intent = response.content.strip()
         
         # Convert response into the Intent enum, falling back to UNKNOWN if invalid
         try:
             detected_intent = Intent(raw_intent)
         except ValueError:
-            # Handle cases where LLM might return surrounding quotes or symbols
             clean_intent = raw_intent.replace('"', '').replace("'", "").strip().upper()
             try:
                 detected_intent = Intent(clean_intent)
@@ -91,13 +104,16 @@ def router_node(state: AgentState) -> dict:
     # Return updates to merge into the state
     return {
         "intent": detected_intent,
-        "selected_tool": selected_tool
+        "selected_tool": selected_tool,
+        "extracted_data": extracted_data,
+        "interaction_id": interaction_id
     }
 
 def response_node(state: AgentState) -> dict:
     """Formulates final conversational response if not already set by a tool."""
     response = state.get("response", "")
     intent = state.get("intent")
+    selected_tool = state.get("selected_tool")
     user_input = state.get("user_input", "")
     
     if not response:
@@ -118,5 +134,8 @@ def response_node(state: AgentState) -> dict:
             response = "Processing completed."
             
     return {
-        "response": response
+        "response": response,
+        "last_intent": intent.value if intent else None,
+        "last_tool": selected_tool,
+        "last_response": response
     }
