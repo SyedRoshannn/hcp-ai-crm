@@ -1,1 +1,2 @@
 from app.langgraph.tools.log_interaction_tool import log_interaction_tool
+from app.langgraph.tools.edit_interaction_tool import edit_interaction_tool
