@@ -41,7 +41,7 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 const isSupported = !!SpeechRecognition;
 
 const ChatPanel = () => {
-  const { chat_history, loading, extracted_data, interaction_id, last_intent, last_tool, last_response } = useSelector((state) => state.interaction);
+  const { chat_history, loading, extracted_data, interaction_id, last_intent, last_tool, last_response, error } = useSelector((state) => state.interaction);
   const dispatch = useDispatch();
   const [inputText, setInputText] = useState('');
   const [isListening, setIsListening] = useState(false);
@@ -99,7 +99,6 @@ const ChatPanel = () => {
           handleSend(null, finalQuery);
           transcriptRef.current = '';
         }
-        // Auto-focus textarea after recording
         textareaRef.current?.focus();
       };
 
@@ -135,7 +134,6 @@ const ChatPanel = () => {
     const query = (textOverride || inputText).trim();
     if (!query || loading) return;
 
-    // 1. Dispatch the user's message to Redux chat log
     dispatch(addChatMessage({
       sender: 'user',
       text: query
@@ -147,7 +145,6 @@ const ChatPanel = () => {
     setRecognitionError('');
 
     try {
-      // 2. Call POST /chat passing state variables including memory tracking
       const response = await api.post('/chat', { 
         message: query,
         extracted_data: extracted_data,
@@ -168,7 +165,6 @@ const ChatPanel = () => {
         last_response: new_last_response
       } = response.data;
 
-      // 3. Update Redux store
       dispatch(updateExtractedData(new_extracted_data));
       if (new_interaction_id !== undefined) {
         dispatch(setInteractionId(new_interaction_id));
@@ -179,7 +175,6 @@ const ChatPanel = () => {
         last_response: new_last_response
       }));
 
-      // 4. Determine AI message response text (prefer backend-generated responses)
       let aiResponseText = ai_response;
       if (!aiResponseText) {
         aiResponseText = `✅ Interaction details parsed successfully.\n\n`;
@@ -220,11 +215,7 @@ const ChatPanel = () => {
     } catch (err) {
       console.error(err);
       const errorMessage = err.response?.data?.detail || err.message || 'An error occurred during communication.';
-      
-      // Update Redux with the error
       dispatch(setError(errorMessage));
-
-      // Append an error message bubble in the chat log
       dispatch(addChatMessage({
         sender: 'ai',
         text: `⚠️ Error: ${errorMessage}`
@@ -233,6 +224,8 @@ const ChatPanel = () => {
       dispatch(setLoading(false));
     }
   };
+
+  const isHistoryEmpty = chat_history.length === 1 && chat_history[0].sender === 'ai';
 
   return (
     <div className="chat-panel-container">
@@ -244,12 +237,37 @@ const ChatPanel = () => {
         </div>
       </div>
 
+      {error && (
+        <div className="chat-error-banner">
+          <span>⚠️ {error}</span>
+          <button className="chat-error-close-btn" onClick={() => dispatch(setError(null))}>&times;</button>
+        </div>
+      )}
+
       <div className="chat-messages-container">
-        {chat_history.map((msg, index) => (
-          <div key={index} className={`chat-message-bubble ${msg.sender}-bubble`}>
-            {msg.text}
+        {isHistoryEmpty ? (
+          <div className="chat-welcome-card">
+            <div className="chat-welcome-icon">👋</div>
+            <h3 className="chat-welcome-title">Welcome to HCP CRM AI</h3>
+            <p className="chat-welcome-desc">
+              Describe an HCP interaction by typing or using the microphone. I can log details, edit interactions, search history, recommend materials, and manage follow-ups.
+            </p>
+            <div className="chat-welcome-suggestions">
+              <span className="suggestion-tag" onClick={() => setInputText("Met Dr. Smith today. Discussed Product X. Positive response.")}>
+                "Met Dr. Smith today..."
+              </span>
+              <span className="suggestion-tag" onClick={() => setInputText("Show meetings with Dr. Smith")}>
+                "Show meetings with Dr. Smith"
+              </span>
+            </div>
           </div>
-        ))}
+        ) : (
+          chat_history.map((msg, index) => (
+            <div key={index} className={`chat-message-bubble ${msg.sender}-bubble`}>
+              {msg.text}
+            </div>
+          ))
+        )}
         {loading && (
           <div className="chat-message-bubble ai-bubble">
             <div className="typing-indicator">
@@ -290,7 +308,7 @@ const ChatPanel = () => {
             className={`chat-mic-btn ${isListening ? 'listening' : ''} ${!isSupported ? 'unsupported' : ''}`}
             onClick={toggleListening}
             disabled={loading || !isSupported}
-            title={!isSupported ? "Speech recognition is not supported in this browser." : isListening ? "Stop listening" : "Start voice input"}
+            title={!isSupported ? "Speech recognition is not supported in this browser." : isListening ? "Stop listening" : "Voice Input"}
             aria-label="Toggle voice input"
           >
             <MicIcon className={isListening ? "pulse-icon" : ""} />

@@ -1,13 +1,45 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 
 const InteractionForm = () => {
   const { extracted_data } = useSelector((state) => state.interaction);
+  const prevDataRef = useRef({});
+  const [changedFields, setChangedFields] = useState({});
+
+  // Form field update highlighting effect
+  useEffect(() => {
+    if (Object.keys(prevDataRef.current).length > 0) {
+      const changed = {};
+      Object.keys(extracted_data).forEach((key) => {
+        const prevVal = prevDataRef.current[key];
+        const curVal = extracted_data[key];
+        if (JSON.stringify(prevVal) !== JSON.stringify(curVal)) {
+          changed[key] = true;
+        }
+      });
+      if (Object.keys(changed).length > 0) {
+        setChangedFields(changed);
+        const timer = setTimeout(() => setChangedFields({}), 2000);
+        return () => clearTimeout(timer);
+      }
+    }
+    prevDataRef.current = { ...extracted_data };
+  }, [extracted_data]);
+
+  // Helper to format sentiment classes
+  const getSentimentBadgeClass = (sentiment) => {
+    if (!sentiment) return 'sentiment-badge-empty';
+    const s = sentiment.toLowerCase();
+    if (s === 'positive') return 'sentiment-badge-positive';
+    if (s === 'negative') return 'sentiment-badge-negative';
+    return 'sentiment-badge-neutral';
+  };
 
   return (
     <div className="interaction-form-card">
       <div className="form-header-container">
         <h2 className="form-title">Log HCP Interaction</h2>
+        <span className="form-subtitle-badge">Read-Only View</span>
       </div>
       
       {/* 1. Core Interaction Details */}
@@ -15,35 +47,27 @@ const InteractionForm = () => {
         <h3 className="section-title">Interaction Details</h3>
         
         <div className="form-grid">
-          <div className="form-group">
+          <div className={`form-group ${changedFields.hcp_name ? 'highlight-animation' : ''}`}>
             <label className="form-label">HCP Name</label>
             <input
               type="text"
               className="form-input"
-              placeholder="Search or select HCP..."
+              placeholder="E.g., Dr. Smith"
               value={extracted_data.hcp_name || ''}
               readOnly
             />
           </div>
           
-          <div className="form-group">
+          <div className={`form-group ${changedFields.interaction_type ? 'highlight-animation' : ''}`}>
             <label className="form-label">Interaction Type</label>
-            <select
-              className="form-select"
-              value={extracted_data.interaction_type || 'Meeting'}
-              disabled
-            >
-              <option value="Meeting">Meeting</option>
-              <option value="Call">Call</option>
-              <option value="Email">Email</option>
-              <option value="Seminar">Seminar</option>
-              <option value="Presentation">Presentation</option>
-            </select>
+            <div className="form-input-placeholder">
+              {extracted_data.interaction_type || 'Meeting'}
+            </div>
           </div>
         </div>
 
-        <div className="form-grid">
-          <div className="form-group">
+        <div className="form-grid" style={{ marginTop: '16px' }}>
+          <div className={`form-group ${changedFields.date ? 'highlight-animation' : ''}`}>
             <label className="form-label">Date</label>
             <input
               type="text"
@@ -54,7 +78,7 @@ const InteractionForm = () => {
             />
           </div>
           
-          <div className="form-group">
+          <div className={`form-group ${changedFields.time ? 'highlight-animation' : ''}`}>
             <label className="form-label">Time</label>
             <input
               type="text"
@@ -65,151 +89,113 @@ const InteractionForm = () => {
             />
           </div>
         </div>
+      </div>
 
-        <div className="form-group">
+      {/* 2. Meeting Details */}
+      <div className="form-section">
+        <h3 className="section-title">Meeting Details</h3>
+        
+        <div className={`form-group ${changedFields.attendees ? 'highlight-animation' : ''}`}>
           <label className="form-label">Attendees</label>
           {extracted_data.attendees && extracted_data.attendees.length > 0 ? (
             <ul className="list-tags">
               {extracted_data.attendees.map((item, idx) => (
-                <li key={idx}>{item}</li>
+                <li key={idx} className="attendee-chip">{item}</li>
               ))}
             </ul>
           ) : (
-            <input
-              type="text"
-              className="form-input"
-              placeholder="No attendees added..."
-              value=""
-              readOnly
-            />
+            <div className="empty-field-placeholder">No attendees recorded.</div>
           )}
         </div>
 
-        <div className="form-group">
+        <div className={`form-group ${changedFields.topics_discussed ? 'highlight-animation' : ''}`} style={{ marginTop: '16px' }}>
           <label className="form-label">Topics Discussed</label>
           {extracted_data.topics_discussed && extracted_data.topics_discussed.length > 0 ? (
             <ul className="list-tags">
               {extracted_data.topics_discussed.map((item, idx) => (
-                <li key={idx} style={{ backgroundColor: '#f0fdf4', color: '#166534', borderColor: '#bbf7d0' }}>{item}</li>
+                <li key={idx} className="topic-chip">{item}</li>
               ))}
             </ul>
           ) : (
-            <input
-              type="text"
-              className="form-input"
-              placeholder="No topics added..."
-              value=""
-              readOnly
-            />
+            <div className="empty-field-placeholder">No topics discussed.</div>
           )}
-        </div>
-
-        <div className="voice-note-btn-container">
-          <button className="voice-note-btn" type="button" disabled>
-            <span className="mic-icon">🎙️</span> Summarize from Voice Note (Requires Consent)
-          </button>
         </div>
       </div>
 
-      {/* 2. Sentiment and Outcomes */}
+      {/* 3. Materials Shared and Samples Distributed */}
+      <div className="form-section">
+        <h3 className="section-title">Materials & Samples</h3>
+        
+        <div className="form-grid">
+          <div className={`materials-sub-section ${changedFields.materials_shared ? 'highlight-animation' : ''}`}>
+            <div className="materials-header">
+              <span className="sub-section-title">Materials Shared</span>
+            </div>
+            {extracted_data.materials_shared && extracted_data.materials_shared.length > 0 ? (
+              <ul className="materials-chips-list">
+                {extracted_data.materials_shared.map((m, idx) => (
+                  <li key={idx} className="material-chip">{m}</li>
+                ))}
+              </ul>
+            ) : (
+              <div className="empty-field-placeholder">No materials shared.</div>
+            )}
+          </div>
+
+          <div className={`materials-sub-section ${changedFields.samples_distributed ? 'highlight-animation' : ''}`}>
+            <div className="materials-header">
+              <span className="sub-section-title">Samples Distributed</span>
+            </div>
+            {extracted_data.samples_distributed && extracted_data.samples_distributed.length > 0 ? (
+              <ul className="materials-chips-list">
+                {extracted_data.samples_distributed.map((s, idx) => (
+                  <li key={idx} className="sample-chip">{s}</li>
+                ))}
+              </ul>
+            ) : (
+              <div className="empty-field-placeholder">No samples distributed.</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Sentiment and Outcomes */}
       <div className="form-section">
         <h3 className="section-title">Sentiment & Outcomes</h3>
         
         <div className="form-grid">
-          <div className="form-group">
+          <div className={`form-group ${changedFields.sentiment ? 'highlight-animation' : ''}`}>
             <label className="form-label">HCP Sentiment</label>
-            <input
-              type="text"
-              className="form-input"
-              placeholder="E.g., Positive, Neutral, Negative"
-              value={extracted_data.sentiment || ''}
-              readOnly
-              style={{
-                fontWeight: 'bold',
-                color: extracted_data.sentiment?.toLowerCase() === 'positive' ? '#166534' : 
-                       extracted_data.sentiment?.toLowerCase() === 'negative' ? '#991b1b' : '#1e293b'
-              }}
-            />
+            <div style={{ marginTop: '4px' }}>
+              <span className={`sentiment-badge ${getSentimentBadgeClass(extracted_data.sentiment)}`}>
+                {extracted_data.sentiment || 'None'}
+              </span>
+            </div>
           </div>
           
-          <div className="form-group">
+          <div className={`form-group ${changedFields.outcomes ? 'highlight-animation' : ''}`}>
             <label className="form-label">Outcomes</label>
             <input
               type="text"
               className="form-input"
-              placeholder="Key outcome or agreements..."
+              placeholder="Key outcomes..."
               value={extracted_data.outcomes || ''}
               readOnly
             />
           </div>
         </div>
 
-        <div className="form-group">
+        <div className={`form-group ${changedFields.follow_up_actions ? 'highlight-animation' : ''}`} style={{ marginTop: '16px' }}>
           <label className="form-label">Follow-up Actions</label>
           {extracted_data.follow_up_actions && extracted_data.follow_up_actions.length > 0 ? (
             <ul className="list-tags">
               {extracted_data.follow_up_actions.map((item, idx) => (
-                <li key={idx} style={{ backgroundColor: '#fff7ed', color: '#c2410c', borderColor: '#ffedd5' }}>{item}</li>
+                <li key={idx} className="follow-up-chip">{item}</li>
               ))}
             </ul>
           ) : (
-            <input
-              type="text"
-              className="form-input"
-              placeholder="No follow-up actions recorded..."
-              value=""
-              readOnly
-            />
+            <div className="empty-field-placeholder">No follow-up actions recorded.</div>
           )}
-        </div>
-      </div>
-
-      {/* 3. Materials and Samples */}
-      <div className="form-section">
-        <h3 className="section-title">Materials Shared & Samples Distributed</h3>
-        
-        <div className="form-grid">
-          <div className="materials-sub-section">
-            <div className="materials-header">
-              <span className="sub-section-title">Materials Shared</span>
-              <button className="search-add-btn" type="button" disabled>
-                🔍 Search/Add
-              </button>
-            </div>
-            
-            <div className="materials-list-empty">
-              {extracted_data.materials_shared && extracted_data.materials_shared.length > 0 ? (
-                <ul className="materials-list">
-                  {extracted_data.materials_shared.map((m, idx) => (
-                    <li key={idx}>{m}</li>
-                  ))}
-                </ul>
-              ) : (
-                <span className="empty-text">No materials added.</span>
-              )}
-            </div>
-          </div>
-
-          <div className="materials-sub-section">
-            <div className="materials-header">
-              <span className="sub-section-title">Samples Distributed</span>
-              <button className="search-add-btn" type="button" disabled>
-                🔍 Search/Add
-              </button>
-            </div>
-            
-            <div className="materials-list-empty">
-              {extracted_data.samples_distributed && extracted_data.samples_distributed.length > 0 ? (
-                <ul className="materials-list">
-                  {extracted_data.samples_distributed.map((s, idx) => (
-                    <li key={idx}>{s}</li>
-                  ))}
-                </ul>
-              ) : (
-                <span className="empty-text">No samples distributed.</span>
-              )}
-            </div>
-          </div>
         </div>
       </div>
     </div>
