@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { addChatMessage, updateExtractedData, setLoading, setError } from '../../redux/interactionSlice';
 import api from '../../services/api';
@@ -7,6 +7,12 @@ const ChatPanel = () => {
   const { chat_history, loading } = useSelector((state) => state.interaction);
   const dispatch = useDispatch();
   const [inputText, setInputText] = useState('');
+  const messagesEndRef = useRef(null);
+
+  // Auto scroll chat to the bottom on new message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chat_history, loading]);
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -32,8 +38,36 @@ const ChatPanel = () => {
       // 3. Update Redux store with the extracted data
       dispatch(updateExtractedData(extracted_data));
 
-      // 4. Formulate a friendly AI response based on the output metadata
-      const aiResponseText = `Successfully processed. Intent detected: "${intent}". Executed tool: "${selected_tool || 'none'}". Form details updated!`;
+      // 4. Formulate a natural conversational response
+      let aiResponseText = `✅ Interaction details parsed successfully.\n\n`;
+      aiResponseText += `I extracted the following details:\n`;
+      
+      if (extracted_data.hcp_name) aiResponseText += `• **Doctor**: ${extracted_data.hcp_name}\n`;
+      if (extracted_data.interaction_type) aiResponseText += `• **Interaction**: ${extracted_data.interaction_type}\n`;
+      if (extracted_data.date) aiResponseText += `• **Date**: ${extracted_data.date}\n`;
+      if (extracted_data.time) aiResponseText += `• **Time**: ${extracted_data.time}\n`;
+      
+      if (extracted_data.attendees && extracted_data.attendees.length > 0) {
+        aiResponseText += `• **Attendees**: ${extracted_data.attendees.join(', ')}\n`;
+      }
+      if (extracted_data.topics_discussed && extracted_data.topics_discussed.length > 0) {
+        aiResponseText += `• **Topics**: ${extracted_data.topics_discussed.join(', ')}\n`;
+      }
+      if (extracted_data.materials_shared && extracted_data.materials_shared.length > 0) {
+        aiResponseText += `• **Materials Shared**: ${extracted_data.materials_shared.join(', ')}\n`;
+      }
+      if (extracted_data.samples_distributed && extracted_data.samples_distributed.length > 0) {
+        aiResponseText += `• **Samples Distributed**: ${extracted_data.samples_distributed.join(', ')}\n`;
+      }
+      if (extracted_data.sentiment) aiResponseText += `• **Sentiment**: ${extracted_data.sentiment}\n`;
+      if (extracted_data.outcomes) aiResponseText += `• **Outcomes**: ${extracted_data.outcomes}\n`;
+      if (extracted_data.follow_up_actions && extracted_data.follow_up_actions.length > 0) {
+        aiResponseText += `• **Follow-up Actions**: ${extracted_data.follow_up_actions.join(', ')}\n`;
+      }
+
+      aiResponseText += `\nYour interaction form has been updated automatically.\n\n`;
+      aiResponseText += `Would you like to add a follow-up action or make any edits?`;
+
       dispatch(addChatMessage({
         sender: 'ai',
         text: aiResponseText
@@ -43,10 +77,10 @@ const ChatPanel = () => {
       console.error(err);
       const errorMessage = err.response?.data?.detail || err.message || 'An error occurred during communication.';
       
-      // 5. Update Redux with the error
+      // Update Redux with the error
       dispatch(setError(errorMessage));
 
-      // 6. Append an error message bubble in the chat log
+      // Append an error message bubble in the chat log
       dispatch(addChatMessage({
         sender: 'ai',
         text: `⚠️ Error: ${errorMessage}`
@@ -73,10 +107,15 @@ const ChatPanel = () => {
           </div>
         ))}
         {loading && (
-          <div className="chat-message-bubble ai-bubble loading-bubble">
-            AI is thinking...
+          <div className="chat-message-bubble ai-bubble">
+            <div className="typing-indicator">
+              <div className="typing-dot"></div>
+              <div className="typing-dot"></div>
+              <div className="typing-dot"></div>
+            </div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       <form className="chat-input-form" onSubmit={handleSend}>
