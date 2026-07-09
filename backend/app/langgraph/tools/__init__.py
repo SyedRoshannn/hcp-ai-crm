@@ -1,3 +1,5 @@
 from app.langgraph.tools.log_interaction_tool import log_interaction_tool
 from app.langgraph.tools.edit_interaction_tool import edit_interaction_tool
 from app.langgraph.tools.voice_summary_tool import voice_summary_tool
+from app.langgraph.tools.material_recommendation_tool import material_recommendation_tool
+from app.langgraph.tools.follow_up_tool import follow_up_tool

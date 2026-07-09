@@ -9,7 +9,7 @@ Your task is to classify the user's input request into exactly ONE of the follow
 - EDIT_INTERACTION: Use this when the user asks to edit, update, modify, correct, change, or remove fields in an existing interaction log (e.g., "Change the date of the meeting to yesterday", "Add Dr. Lee to attendees", "Change the sentiment to Neutral", "Update meeting date to tomorrow", "Modify attendees", "Remove brochure", "Add follow up").
 - VOICE_SUMMARY: Use this when the user explicitly requests to summarize a voice note, transcript, or audio clip (e.g., "Summarize this voice note", "Process this audio file").
 - MATERIAL_RECOMMENDATION: Use this when the user asks for brochures, publications, details, or recommendation of materials (e.g., "Recommend brochure for diabetes", "Show me diabetes materials").
-- FOLLOW_UP: Use this when the user wants to schedule, add, or record a follow-up action or next step (e.g., "Schedule follow up", "Set a follow up call for next Tuesday").
+- FOLLOW_UP: Use this when the user wants to schedule, add, update, remove, or check a follow-up action or next step (e.g., "Schedule follow up", "Set a follow up call for next Tuesday", "Add reminder", "Remind me", "Update follow up", "Delete follow up", "Remove reminder", "When is my follow up?", "What is my follow up?").
 - UNKNOWN: Use this when the user's request is a generic greeting, question, or doesn't match any of the above intents (e.g., "Hello", "How does this work?", "What can you do?", "What are you?").
 
 Response Rules:

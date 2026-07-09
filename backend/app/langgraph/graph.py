@@ -4,6 +4,8 @@ from app.langgraph.nodes import router_node, response_node
 from app.langgraph.tools.log_interaction_tool import log_interaction_tool
 from app.langgraph.tools.edit_interaction_tool import edit_interaction_tool
 from app.langgraph.tools.voice_summary_tool import voice_summary_tool
+from app.langgraph.tools.material_recommendation_tool import material_recommendation_tool
+from app.langgraph.tools.follow_up_tool import follow_up_tool
 
 def route_after_router(state: AgentState) -> str:
     """
@@ -17,12 +19,10 @@ def route_after_router(state: AgentState) -> str:
         return "edit_interaction_tool"
     if selected_tool == "voice_summary_tool":
         return "voice_summary_tool"
-    
-    # Placeholder routing paths for future tool nodes:
-    # if selected_tool == "material_recommendation_tool":
-    #     return "material_recommendation_tool"
-    # if selected_tool == "follow_up_tool":
-    #     return "follow_up_tool"
+    if selected_tool == "material_recommendation_tool":
+        return "material_recommendation_tool"
+    if selected_tool == "follow_up_tool":
+        return "follow_up_tool"
         
     return "response_node"
 
@@ -34,6 +34,8 @@ workflow.add_node("router_node", router_node)
 workflow.add_node("log_interaction_tool", log_interaction_tool)
 workflow.add_node("edit_interaction_tool", edit_interaction_tool)
 workflow.add_node("voice_summary_tool", voice_summary_tool)
+workflow.add_node("material_recommendation_tool", material_recommendation_tool)
+workflow.add_node("follow_up_tool", follow_up_tool)
 workflow.add_node("response_node", response_node)
 
 # Construct sequential transitions and conditional routing
@@ -47,10 +49,9 @@ workflow.add_conditional_edges(
         "log_interaction_tool": "log_interaction_tool",
         "edit_interaction_tool": "edit_interaction_tool",
         "voice_summary_tool": "voice_summary_tool",
+        "material_recommendation_tool": "material_recommendation_tool",
+        "follow_up_tool": "follow_up_tool",
         "response_node": "response_node"
-        # Future mappings:
-        # "material_recommendation_tool": "material_recommendation_tool",
-        # "follow_up_tool": "follow_up_tool",
     }
 )
 
@@ -58,6 +59,8 @@ workflow.add_conditional_edges(
 workflow.add_edge("log_interaction_tool", "response_node")
 workflow.add_edge("edit_interaction_tool", "response_node")
 workflow.add_edge("voice_summary_tool", "response_node")
+workflow.add_edge("material_recommendation_tool", "response_node")
+workflow.add_edge("follow_up_tool", "response_node")
 
 # Edge from response_node to the end of workflow
 workflow.add_edge("response_node", END)

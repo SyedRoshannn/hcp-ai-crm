@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from app.langgraph.graph import app_graph
 from app.langgraph.state import AgentState
 
@@ -15,6 +15,7 @@ class ChatResponse(BaseModel):
     selected_tool: Optional[str]
     extracted_data: Dict[str, Any]
     response: Optional[str] = None
+    recommended_materials: Optional[List[str]] = None
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
@@ -30,7 +31,8 @@ async def chat_endpoint(request: ChatRequest):
             "selected_tool": None,
             "response": "",
             "messages": [],
-            "errors": []
+            "errors": [],
+            "recommended_materials": None
         }
         
         # Invoke the compiled graph
@@ -43,12 +45,13 @@ async def chat_endpoint(request: ChatRequest):
                 detail=f"Internal Graph Error: {', '.join(result['errors'])}"
             )
             
-        # Return the response properties including response message
+        # Return the response properties including response message and recommended materials list
         return ChatResponse(
             intent=result.get("intent"),
             selected_tool=result.get("selected_tool"),
             extracted_data=result.get("extracted_data", {}),
-            response=result.get("response")
+            response=result.get("response"),
+            recommended_materials=result.get("recommended_materials")
         )
     except HTTPException as he:
         raise he
