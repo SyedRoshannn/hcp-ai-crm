@@ -14,6 +14,7 @@ const initialState = {
     outcomes: '',
     follow_up_actions: []
   },
+  interaction_id: null,
   loading: false,
   error: null,
   chat_history: [
@@ -31,6 +32,9 @@ const interactionSlice = createSlice({
     updateExtractedData: (state, action) => {
       state.extracted_data = { ...state.extracted_data, ...action.payload };
     },
+    setInteractionId: (state, action) => {
+      state.interaction_id = action.payload;
+    },
     addChatMessage: (state, action) => {
       state.chat_history.push(action.payload);
     },
@@ -43,11 +47,12 @@ const interactionSlice = createSlice({
     resetState: (state) => {
       state.extracted_data = initialState.extracted_data;
       state.chat_history = initialState.chat_history;
+      state.interaction_id = null;
       state.error = null;
       state.loading = false;
     }
   }
 });
 
-export const { updateExtractedData, addChatMessage, setLoading, setError, resetState } = interactionSlice.actions;
+export const { updateExtractedData, setInteractionId, addChatMessage, setLoading, setError, resetState } = interactionSlice.actions;
 export default interactionSlice.reducer;

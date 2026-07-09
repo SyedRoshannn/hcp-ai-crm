@@ -21,3 +21,4 @@ class AgentState(TypedDict):
     messages: Annotated[List[BaseMessage], add_messages]
     errors: List[str]
     recommended_materials: Optional[List[str]]
+    interaction_id: Optional[str]

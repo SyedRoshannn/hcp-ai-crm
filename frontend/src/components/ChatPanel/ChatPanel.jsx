@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { addChatMessage, updateExtractedData, setLoading, setError } from '../../redux/interactionSlice';
+import { addChatMessage, updateExtractedData, setInteractionId, setLoading, setError } from '../../redux/interactionSlice';
 import api from '../../services/api';
 
 const ChatPanel = () => {
-  const { chat_history, loading, extracted_data } = useSelector((state) => state.interaction);
+  const { chat_history, loading, extracted_data, interaction_id } = useSelector((state) => state.interaction);
   const dispatch = useDispatch();
   const [inputText, setInputText] = useState('');
   const messagesEndRef = useRef(null);
@@ -30,16 +30,20 @@ const ChatPanel = () => {
     dispatch(setError(null));
 
     try {
-      // 2. Call POST /chat using Axios client, passing the current extracted_data state
+      // 2. Call POST /chat using Axios client, passing the current extracted_data and interaction_id
       const response = await api.post('/chat', { 
         message: query,
-        extracted_data: extracted_data
+        extracted_data: extracted_data,
+        interaction_id: interaction_id
       });
       
-      const { intent, selected_tool, extracted_data: new_extracted_data, response: ai_response } = response.data;
+      const { intent, selected_tool, extracted_data: new_extracted_data, response: ai_response, interaction_id: new_interaction_id } = response.data;
 
-      // 3. Update Redux store with the extracted data
+      // 3. Update Redux store with the extracted data and interaction_id
       dispatch(updateExtractedData(new_extracted_data));
+      if (new_interaction_id) {
+        dispatch(setInteractionId(new_interaction_id));
+      }
 
       // 4. Determine AI message response text (prefer backend-generated responses)
       let aiResponseText = ai_response;
