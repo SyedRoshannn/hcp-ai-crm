@@ -3,20 +3,136 @@ import { useSelector, useDispatch } from 'react-redux';
 import { addChatMessage, updateExtractedData, setInteractionId, setMemory, setLoading, setError } from '../../redux/interactionSlice';
 import api from '../../services/api';
 
+const MicIcon = ({ className }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+    style={{ width: '18px', height: '18px' }}
+  >
+    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+    <path d="M19 10v1a7 7 0 0 1-14 0v-1" />
+    <line x1="12" x2="12" y1="19" y2="22" />
+  </svg>
+);
+
+const SendIcon = () => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+    style={{ width: '18px', height: '18px' }}
+  >
+    <line x1="22" x2="11" y1="2" y2="13" />
+    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+  </svg>
+);
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const isSupported = !!SpeechRecognition;
+
 const ChatPanel = () => {
   const { chat_history, loading, extracted_data, interaction_id, last_intent, last_tool, last_response } = useSelector((state) => state.interaction);
   const dispatch = useDispatch();
   const [inputText, setInputText] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [recognitionError, setRecognitionError] = useState('');
+  
   const messagesEndRef = useRef(null);
+  const textareaRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const transcriptRef = useRef('');
 
   // Auto scroll chat to the bottom on new message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chat_history, loading]);
 
-  const handleSend = async (e) => {
-    e.preventDefault();
-    const query = inputText.trim();
+  // Initialize Speech Recognition on Mount
+  useEffect(() => {
+    if (isSupported) {
+      const rec = new SpeechRecognition();
+      rec.lang = 'en-US';
+      rec.continuous = false;
+      rec.interimResults = true;
+
+      rec.onstart = () => {
+        setIsListening(true);
+        setRecognitionError('');
+      };
+
+      rec.onresult = (event) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0])
+          .map(result => result.transcript)
+          .join('');
+        
+        transcriptRef.current = transcript;
+        setInputText(transcript);
+      };
+
+      rec.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+        if (event.error === 'not-allowed') {
+          setRecognitionError('Microphone access denied.');
+        } else if (event.error === 'no-speech') {
+          setRecognitionError('No speech detected.');
+        } else {
+          setRecognitionError(`Speech recognition error: ${event.error}`);
+        }
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+        const finalQuery = transcriptRef.current.trim();
+        if (finalQuery) {
+          handleSend(null, finalQuery);
+          transcriptRef.current = '';
+        }
+        // Auto-focus textarea after recording
+        textareaRef.current?.focus();
+      };
+
+      recognitionRef.current = rec;
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
+    };
+  }, []);
+
+  const toggleListening = () => {
+    if (!isSupported || loading) return;
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+    } else {
+      setInputText('');
+      transcriptRef.current = '';
+      setRecognitionError('');
+      try {
+        recognitionRef.current?.start();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
+  const handleSend = async (e, textOverride = '') => {
+    if (e) e.preventDefault();
+    const query = (textOverride || inputText).trim();
     if (!query || loading) return;
 
     // 1. Dispatch the user's message to Redux chat log
@@ -28,6 +144,7 @@ const ChatPanel = () => {
     setInputText('');
     dispatch(setLoading(true));
     dispatch(setError(null));
+    setRecognitionError('');
 
     try {
       // 2. Call POST /chat passing state variables including memory tracking
@@ -145,22 +262,48 @@ const ChatPanel = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <form className="chat-input-form" onSubmit={handleSend}>
+      {recognitionError && (
+        <div className="chat-speech-error">
+          ⚠️ {recognitionError}
+        </div>
+      )}
+
+      <form className="chat-input-form" onSubmit={(e) => handleSend(e)}>
         <textarea
+          ref={textareaRef}
           className="chat-textarea"
-          placeholder={loading ? "AI is processing..." : "Describe Interaction..."}
+          placeholder={
+            isListening 
+              ? "Listening..." 
+              : loading 
+                ? "AI is processing..." 
+                : "Describe Interaction..."
+          }
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          disabled={loading}
+          disabled={loading || isListening}
           rows={2}
         />
-        <button 
-          className="chat-send-btn" 
-          type="submit" 
-          disabled={loading || !inputText.trim()}
-        >
-          ➔
-        </button>
+        <div className="chat-controls">
+          <button
+            type="button"
+            className={`chat-mic-btn ${isListening ? 'listening' : ''} ${!isSupported ? 'unsupported' : ''}`}
+            onClick={toggleListening}
+            disabled={loading || !isSupported}
+            title={!isSupported ? "Speech recognition is not supported in this browser." : isListening ? "Stop listening" : "Start voice input"}
+            aria-label="Toggle voice input"
+          >
+            <MicIcon className={isListening ? "pulse-icon" : ""} />
+          </button>
+          <button 
+            className="chat-send-btn" 
+            type="submit" 
+            disabled={loading || isListening || !inputText.trim()}
+            aria-label="Send message"
+          >
+            <SendIcon />
+          </button>
+        </div>
       </form>
     </div>
   );
