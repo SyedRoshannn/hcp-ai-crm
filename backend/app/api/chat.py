@@ -8,11 +8,13 @@ router = APIRouter()
 
 class ChatRequest(BaseModel):
     message: str
+    extracted_data: Optional[Dict[str, Any]] = None
 
 class ChatResponse(BaseModel):
     intent: Optional[str]
     selected_tool: Optional[str]
     extracted_data: Dict[str, Any]
+    response: Optional[str] = None
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
@@ -24,7 +26,7 @@ async def chat_endpoint(request: ChatRequest):
         initial_state: AgentState = {
             "user_input": request.message,
             "intent": None,
-            "extracted_data": {},
+            "extracted_data": request.extracted_data or {},
             "selected_tool": None,
             "response": "",
             "messages": [],
@@ -41,11 +43,12 @@ async def chat_endpoint(request: ChatRequest):
                 detail=f"Internal Graph Error: {', '.join(result['errors'])}"
             )
             
-        # Return only the requested properties
+        # Return the response properties including response message
         return ChatResponse(
             intent=result.get("intent"),
             selected_tool=result.get("selected_tool"),
-            extracted_data=result.get("extracted_data", {})
+            extracted_data=result.get("extracted_data", {}),
+            response=result.get("response")
         )
     except HTTPException as he:
         raise he

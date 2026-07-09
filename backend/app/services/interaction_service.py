@@ -1,16 +1,9 @@
-from app.ai.llm import get_llm
 from app.schemas.interaction import InteractionExtraction
-from langchain_core.prompts import ChatPromptTemplate
+from app.utils.structured_parser import safe_llm_call
 
 EXTRACTION_PROMPT = """You are an expert clinical CRM data extraction assistant.
 Extract structured details from the following description of a Healthcare Professional (HCP) interaction.
 Analyze the input text carefully and extract the fields.
-
-CRITICAL FORMATTING RULES:
-1. Every List[str] field (attendees, topics_discussed, materials_shared, samples_distributed, follow_up_actions) MUST ALWAYS return an array (list of strings).
-2. NEVER return null or None for array/list fields. Use [] if the information is unavailable.
-3. NEVER return a single string where an array is expected. (e.g., topics_discussed: ["Product X"] is correct; topics_discussed: "Product X" is INCORRECT).
-4. NEVER return an array where a string is expected. (e.g., hcp_name: "Dr. Smith" is correct; hcp_name: ["Dr. Smith"] is INCORRECT).
 
 JSON Schema Guidance:
 - attendees: Array of strings. Use [] if not mentioned.
@@ -65,16 +58,68 @@ Output JSON:
 ---
 Input text to extract:
 {user_input}
+
+Return ONLY a valid JSON object.
+DO NOT wrap the JSON inside markdown.
+DO NOT explain anything.
+DO NOT include comments.
+DO NOT include text before the JSON.
+DO NOT include text after the JSON.
+The first character of the response MUST be {{
+The last character MUST be }}
+If a value is unknown:
+- use null for string fields
+- use [] for list fields
+Never invent extra keys.
+Never omit schema keys.
 """
+
+def should_extract(user_input: str) -> bool:
+    """
+    Evaluates whether the user input contains enough meaningful context to perform extraction.
+    Returns False for empty, punctuation, greetings, acknowledgements, or very short inputs.
+    """
+    if not user_input or not user_input.strip():
+        return False
+        
+    # Clean text
+    clean = user_input.strip().lower().rstrip(".!? ")
+    
+    # Check punctuation only
+    if all(char in ".,!?@#$%^&*()_+-=[]{}|;:'\"<>/`~ thumbsup 👍 " for char in clean):
+        return False
+        
+    # Common greetings and acknowledgements
+    greetings_and_acks = {
+        "hello", "hi", "hey", "yo", "greetings", "good morning", "good afternoon", "good evening",
+        "thanks", "thank you", "ok", "okay", "yes", "no", "yep", "nope", "sure", "fine", "thumbs up", "thumbsup",
+        "please", "help", "test", "run", "go"
+    }
+    if clean in greetings_and_acks:
+        return False
+        
+    # Count meaningful words (excluding short words / stopwords / generic conversational tokens)
+    words = [w for w in clean.split() if w not in ["a", "the", "an", "and", "or", "but", "is", "are", "am", "to", "of", "in", "on", "at", "for", "with"]]
+    
+    # Configure threshold (e.g. at least 2 meaningful words)
+    if len(words) < 2:
+        return False
+        
+    return True
 
 def extract_interaction_details(user_input: str) -> InteractionExtraction:
     """Accepts unstructured user input and returns structured InteractionExtraction data using Groq LLM."""
-    llm = get_llm()
-    structured_llm = llm.with_structured_output(InteractionExtraction)
+    string_fields = ['hcp_name', 'interaction_type', 'date', 'time', 'sentiment', 'outcomes']
+    list_fields = ['attendees', 'topics_discussed', 'materials_shared', 'samples_distributed', 'follow_up_actions']
     
-    prompt = ChatPromptTemplate.from_template(EXTRACTION_PROMPT)
-    chain = prompt | structured_llm
+    # Invoke structured parser's safe LLM execution pipeline
+    normalized_dict, warning_msg = safe_llm_call(
+        prompt_template=EXTRACTION_PROMPT,
+        prompt_variables={"user_input": user_input},
+        fallback_data={},
+        string_fields=string_fields,
+        list_fields=list_fields
+    )
     
-    # Execute extraction
-    result = chain.invoke({"user_input": user_input})
-    return result
+    # Instantiate InteractionExtraction in the caller service
+    return InteractionExtraction(**normalized_dict)

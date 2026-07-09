@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 
 class InteractionExtraction(BaseModel):
     """Schema representing structured details extracted from HCP interactions.
@@ -59,3 +59,59 @@ class InteractionExtraction(BaseModel):
             return None
         s = str(v).strip()
         return s if s else None
+
+def normalize_interaction_output(data: Any) -> Dict[str, Any]:
+    """
+    Normalizes a dictionary representing interaction details before Pydantic schema validation.
+    Guarantees:
+    - Every schema field is present.
+    - Missing string fields become None.
+    - Missing list fields become [].
+    - Empty strings for list fields become [].
+    - A single string for a list field becomes [string].
+    - None for list fields becomes [].
+    - Unexpected types are safely converted.
+    """
+    if not isinstance(data, dict):
+        data = {}
+        
+    string_fields = ['hcp_name', 'interaction_type', 'date', 'time', 'sentiment', 'outcomes']
+    list_fields = ['attendees', 'topics_discussed', 'materials_shared', 'samples_distributed', 'follow_up_actions']
+    
+    normalized = {}
+    
+    # 1. Normalize string fields
+    for field in string_fields:
+        val = data.get(field)
+        if val is None:
+            normalized[field] = None
+        elif isinstance(val, list):
+            if len(val) > 0 and val[0] is not None:
+                s = str(val[0]).strip()
+                normalized[field] = s if s else None
+            else:
+                normalized[field] = None
+        else:
+            s = str(val).strip()
+            normalized[field] = s if s else None
+            
+    # 2. Normalize list fields
+    for field in list_fields:
+        val = data.get(field)
+        if val is None:
+            normalized[field] = []
+        elif isinstance(val, str):
+            s = val.strip()
+            normalized[field] = [s] if s else []
+        elif isinstance(val, list):
+            normalized_list = []
+            for item in val:
+                if item is not None:
+                    s = str(item).strip()
+                    if s:
+                        normalized_list.append(s)
+            normalized[field] = normalized_list
+        else:
+            normalized[field] = []
+            
+    return normalized

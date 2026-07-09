@@ -6,11 +6,11 @@ INTENT_CLASSIFICATION_PROMPT = """You are an intent classification assistant for
 Your task is to classify the user's input request into exactly ONE of the following intent categories:
 
 - LOG_INTERACTION: Use this when the user describes a new interaction or meeting with an HCP to log (e.g., "Met Dr. Smith today", "Had a call with Dr. Johnson").
-- EDIT_INTERACTION: Use this when the user asks to edit, update, modify, correct, or change an existing interaction log (e.g., "Change the date of the meeting to yesterday", "Add Dr. Lee to attendees").
+- EDIT_INTERACTION: Use this when the user asks to edit, update, modify, correct, change, or remove fields in an existing interaction log (e.g., "Change the date of the meeting to yesterday", "Add Dr. Lee to attendees", "Change the sentiment to Neutral", "Update meeting date to tomorrow", "Modify attendees", "Remove brochure", "Add follow up").
 - VOICE_SUMMARY: Use this when the user explicitly requests to summarize a voice note, transcript, or audio clip (e.g., "Summarize this voice note", "Process this audio file").
 - MATERIAL_RECOMMENDATION: Use this when the user asks for brochures, publications, details, or recommendation of materials (e.g., "Recommend brochure for diabetes", "Show me diabetes materials").
 - FOLLOW_UP: Use this when the user wants to schedule, add, or record a follow-up action or next step (e.g., "Schedule follow up", "Set a follow up call for next Tuesday").
-- UNKNOWN: Use this when the user's request is a generic greeting, question, or doesn't match any of the above intents (e.g., "Hello", "How does this work?", "What can you do?").
+- UNKNOWN: Use this when the user's request is a generic greeting, question, or doesn't match any of the above intents (e.g., "Hello", "How does this work?", "What can you do?", "What are you?").
 
 Response Rules:
 - Return ONLY the exact string of the chosen category (e.g., LOG_INTERACTION).

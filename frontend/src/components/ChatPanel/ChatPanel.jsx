@@ -4,7 +4,7 @@ import { addChatMessage, updateExtractedData, setLoading, setError } from '../..
 import api from '../../services/api';
 
 const ChatPanel = () => {
-  const { chat_history, loading } = useSelector((state) => state.interaction);
+  const { chat_history, loading, extracted_data } = useSelector((state) => state.interaction);
   const dispatch = useDispatch();
   const [inputText, setInputText] = useState('');
   const messagesEndRef = useRef(null);
@@ -30,43 +30,49 @@ const ChatPanel = () => {
     dispatch(setError(null));
 
     try {
-      // 2. Call POST /chat using Axios client
-      const response = await api.post('/chat', { message: query });
+      // 2. Call POST /chat using Axios client, passing the current extracted_data state
+      const response = await api.post('/chat', { 
+        message: query,
+        extracted_data: extracted_data
+      });
       
-      const { intent, selected_tool, extracted_data } = response.data;
+      const { intent, selected_tool, extracted_data: new_extracted_data, response: ai_response } = response.data;
 
       // 3. Update Redux store with the extracted data
-      dispatch(updateExtractedData(extracted_data));
+      dispatch(updateExtractedData(new_extracted_data));
 
-      // 4. Formulate a natural conversational response
-      let aiResponseText = `✅ Interaction details parsed successfully.\n\n`;
-      aiResponseText += `I extracted the following details:\n`;
-      
-      if (extracted_data.hcp_name) aiResponseText += `• **Doctor**: ${extracted_data.hcp_name}\n`;
-      if (extracted_data.interaction_type) aiResponseText += `• **Interaction**: ${extracted_data.interaction_type}\n`;
-      if (extracted_data.date) aiResponseText += `• **Date**: ${extracted_data.date}\n`;
-      if (extracted_data.time) aiResponseText += `• **Time**: ${extracted_data.time}\n`;
-      
-      if (extracted_data.attendees && extracted_data.attendees.length > 0) {
-        aiResponseText += `• **Attendees**: ${extracted_data.attendees.join(', ')}\n`;
-      }
-      if (extracted_data.topics_discussed && extracted_data.topics_discussed.length > 0) {
-        aiResponseText += `• **Topics**: ${extracted_data.topics_discussed.join(', ')}\n`;
-      }
-      if (extracted_data.materials_shared && extracted_data.materials_shared.length > 0) {
-        aiResponseText += `• **Materials Shared**: ${extracted_data.materials_shared.join(', ')}\n`;
-      }
-      if (extracted_data.samples_distributed && extracted_data.samples_distributed.length > 0) {
-        aiResponseText += `• **Samples Distributed**: ${extracted_data.samples_distributed.join(', ')}\n`;
-      }
-      if (extracted_data.sentiment) aiResponseText += `• **Sentiment**: ${extracted_data.sentiment}\n`;
-      if (extracted_data.outcomes) aiResponseText += `• **Outcomes**: ${extracted_data.outcomes}\n`;
-      if (extracted_data.follow_up_actions && extracted_data.follow_up_actions.length > 0) {
-        aiResponseText += `• **Follow-up Actions**: ${extracted_data.follow_up_actions.join(', ')}\n`;
-      }
+      // 4. Determine AI message response text (prefer backend-generated responses)
+      let aiResponseText = ai_response;
+      if (!aiResponseText) {
+        aiResponseText = `✅ Interaction details parsed successfully.\n\n`;
+        aiResponseText += `I extracted the following details:\n`;
+        
+        if (new_extracted_data.hcp_name) aiResponseText += `• **Doctor**: ${new_extracted_data.hcp_name}\n`;
+        if (new_extracted_data.interaction_type) aiResponseText += `• **Interaction**: ${new_extracted_data.interaction_type}\n`;
+        if (new_extracted_data.date) aiResponseText += `• **Date**: ${new_extracted_data.date}\n`;
+        if (new_extracted_data.time) aiResponseText += `• **Time**: ${new_extracted_data.time}\n`;
+        
+        if (new_extracted_data.attendees && new_extracted_data.attendees.length > 0) {
+          aiResponseText += `• **Attendees**: ${new_extracted_data.attendees.join(', ')}\n`;
+        }
+        if (new_extracted_data.topics_discussed && new_extracted_data.topics_discussed.length > 0) {
+          aiResponseText += `• **Topics**: ${new_extracted_data.topics_discussed.join(', ')}\n`;
+        }
+        if (new_extracted_data.materials_shared && new_extracted_data.materials_shared.length > 0) {
+          aiResponseText += `• **Materials Shared**: ${new_extracted_data.materials_shared.join(', ')}\n`;
+        }
+        if (new_extracted_data.samples_distributed && new_extracted_data.samples_distributed.length > 0) {
+          aiResponseText += `• **Samples Distributed**: ${new_extracted_data.samples_distributed.join(', ')}\n`;
+        }
+        if (new_extracted_data.sentiment) aiResponseText += `• **Sentiment**: ${new_extracted_data.sentiment}\n`;
+        if (new_extracted_data.outcomes) aiResponseText += `• **Outcomes**: ${new_extracted_data.outcomes}\n`;
+        if (new_extracted_data.follow_up_actions && new_extracted_data.follow_up_actions.length > 0) {
+          aiResponseText += `• **Follow-up Actions**: ${new_extracted_data.follow_up_actions.join(', ')}\n`;
+        }
 
-      aiResponseText += `\nYour interaction form has been updated automatically.\n\n`;
-      aiResponseText += `Would you like to add a follow-up action or make any edits?`;
+        aiResponseText += `\nYour interaction form has been updated automatically.\n\n`;
+        aiResponseText += `Would you like to add a follow-up action or make any edits?`;
+      }
 
       dispatch(addChatMessage({
         sender: 'ai',
