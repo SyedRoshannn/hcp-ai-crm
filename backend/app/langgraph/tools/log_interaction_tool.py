@@ -12,9 +12,6 @@ def log_interaction_tool(state: AgentState) -> dict:
     user_input = state.get("user_input", "")
     interaction_id = state.get("interaction_id")
     
-    # Debug Logging for entering tool
-    logger.info(f"[DEBUG LOG] log_interaction_tool entering with interaction_id: {interaction_id}")
-    
     # 1. Prevent extraction on meaningless input
     if not should_extract(user_input):
         return {
@@ -39,8 +36,7 @@ def log_interaction_tool(state: AgentState) -> dict:
             repo = InteractionRepository(db)
             db_interaction = repo.create_interaction(extracted_dict)
             interaction_id = db_interaction.id
-            # Debug Logging for DB creation
-            logger.info(f"[DEBUG LOG] Log tool created DB record. Commit succeeded. Affected row ID: {interaction_id}")
+
             
         # 4. Standardized tool response including interaction_id
         return {
