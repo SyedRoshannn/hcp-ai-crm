@@ -1,0 +1,1 @@
+from app.services.interaction_service import extract_interaction_details
