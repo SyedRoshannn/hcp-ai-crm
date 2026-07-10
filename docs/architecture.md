@@ -10,13 +10,13 @@ The project is built on a split-screen single page layout connected to a statefu
 
 ```mermaid
 flowchart TD
-    subgraph Frontend (React + Redux)
+    subgraph Frontend["Frontend (React + Redux)"]
         UI[React App UI]
         ReduxStore[Redux Store]
         STT[Web Speech STT]
     end
 
-    subgraph Backend (FastAPI + LangGraph)
+    subgraph Backend["Backend (FastAPI + LangGraph)"]
         API[FastAPI Endpoints]
         Workflow[LangGraph Workflow]
         State[Agent State]
@@ -24,9 +24,9 @@ flowchart TD
         ResponseService[Response Generator]
     end
 
-    subgraph Database Layer
+    subgraph DB["Database Layer"]
         Repo[Repositories]
-        Postgres[(PostgreSQL DB)]
+        Postgres[("PostgreSQL DB")]
     end
 
     UI <-->|Redux State Sync| ReduxStore

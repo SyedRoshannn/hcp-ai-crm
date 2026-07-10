@@ -46,7 +46,7 @@ flowchart TD
     FastAPI <-->|Orchestration| LangGraph[LangGraph StateGraph]
     LangGraph <-->|Intents / Node Route| Router[Intent Router]
     LangGraph <-->|Persistence / Fetch| Repos[SQLAlchemy Repositories]
-    Repos <-->|CRUD Query| Postgres[(PostgreSQL DB)]
+    Repos <-->|CRUD Query| Postgres[("PostgreSQL DB")]
 ```
 
 For a detailed architectural breakdown, see [docs/architecture.md](docs/architecture.md).
