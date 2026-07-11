@@ -2,6 +2,12 @@
 
 An enterprise-grade, voice-enabled Healthcare Professional (HCP) CRM Assistant. This application utilizes a dynamic, multi-agent AI assistant powered by FastAPI, React, Redux, LangGraph, and PostgreSQL to streamline and automate HCP meeting log processes.
 
+You can see the complete project Wlakthrough Video Here (click the link below),
+Video : https://1drv.ms/v/c/21bdb0dc534e5b7d/IQBOwVY_P-AMQoLKFZSj0Dd6ASet3_EIF_M_cQgnwEyKQ54?e=Ys4yyx
+IMAGES : <img width="1920" height="1080" alt="Screenshot 2026-07-09 154353" src="https://github.com/user-attachments/assets/204dfc21-46dc-4182-9a25-64dcebdfdff7" />
+<img width="1920" height="1080" alt="Screenshot 2026-07-10 121423" src="https://github.com/user-attachments/assets/430343a6-4e97-4b63-9f98-178d93011f6e" />
+
+
 ---
 
 ## Project Overview
